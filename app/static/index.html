@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Stat-Arb Explorer</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/plotly.js-dist-min@2.35.2/plotly.min.js"></script>
+</head>
+<body>
+  <header>
+    <h1>Stat-Arb Explorer</h1>
+    <p>Load prices, check correlations, test a pair for cointegration, and plot the spread.</p>
+  </header>
+
+  <main>
+    <section class="card">
+      <h2>1. Load prices</h2>
+      <div class="tabs">
+        <button class="tab active" data-tab="tickers">Tickers</button>
+        <button class="tab" data-tab="csv">CSV upload</button>
+      </div>
+      <form id="tickers-form" class="panel">
+        <label>Tickers (comma separated; Yahoo format, e.g. HSBA.L)
+          <input id="tickers" value="HSBA.L, BARC.L, SHEL.L, BP.L, RIO.L, GLEN.L"></label>
+        <div class="row">
+          <label>Start <input type="date" id="start" value="2022-01-01"></label>
+          <label>End <input type="date" id="end"></label>
+        </div>
+        <button type="submit">Fetch prices</button>
+      </form>
+      <form id="csv-form" class="panel" hidden>
+        <label>Wide CSV: first column = date, one column per ticker
+          <input type="file" id="csv" accept=".csv" required></label>
+        <button type="submit">Upload</button>
+      </form>
+      <div id="status" role="status"></div>
+    </section>
+
+    <section class="card" id="corr-card" hidden>
+      <h2>2. Correlation of daily returns</h2>
+      <p class="hint">Click a cell to test that pair.</p>
+      <div id="heatmap"></div>
+    </section>
+
+    <section class="card" id="result-card" hidden>
+      <h2>3. Cointegration</h2>
+      <div class="row">
+        <label>Y <select id="sel-y"></select></label>
+        <label>X <select id="sel-x"></select></label>
+        <label>Z-score window <input type="number" id="window" value="60" min="5" max="250"></label>
+        <label class="check"><input type="checkbox" id="rolling"> Rolling hedge ratio</label>
+        <button id="run">Run test</button>
+      </div>
+      <div id="stats"></div>
+      <div id="spread-plot"></div>
+      <div id="z-plot"></div>
+      <p class="hint">Cointegration is tested in-sample and is not a trading signal. Relationships can break down out of sample.</p>
+    </section>
+  </main>
+  <script src="/static/app.js"></script>
+</body>
+</html>

@@ -38,3 +38,15 @@ During development, a version of the model reported a **1.97 Sharpe Ratio**. For
 
 ## Future Work
 The framework is modular and ready for the implementation of **Kalman Filters** for smoother hedge ratios or **Time-Exit** logic to mitigate the impact of prolonged divergence.
+## Web app
+
+A FastAPI + Plotly tool: load prices (Yahoo tickers or a wide CSV), view the correlation matrix of daily returns, run an Engle-Granger cointegration test on any pair, and plot the spread and z-score.
+
+```bash
+python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
+.venv/bin/uvicorn app.main:app --reload     # http://localhost:8000
+.venv/bin/python -m pytest tests            # tests
+docker build -t statarb . && docker run -p 8000:8000 statarb
+```
+
+Layout: `src/statarb/` holds the analysis library (no web code), `app/` the API and static frontend. Cointegration is tested in-sample and is not a trading signal.

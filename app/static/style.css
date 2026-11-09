@@ -1,0 +1,39 @@
+:root {
+  --bg: #f6f7f9; --card: #fff; --text: #1c2330; --muted: #5b6676;
+  --border: #dde1e7; --accent: #1f5fbf; --good: #1a7f4b; --bad: #b3261e;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --bg: #11151c; --card: #1a202b; --text: #e6e9ef; --muted: #9aa5b5;
+          --border: #2c3544; --accent: #6aa3ff; --good: #4cc38a; --bad: #ff8a80; }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text);
+       font: 15px/1.5 system-ui, -apple-system, sans-serif; }
+header, main { max-width: 960px; margin: 0 auto; padding: 0 16px; }
+header { padding-top: 24px; }
+h1 { margin: 0; font-size: 1.6rem; }
+header p, .hint { color: var(--muted); }
+.card { background: var(--card); border: 1px solid var(--border);
+        border-radius: 10px; padding: 16px; margin: 16px 0; }
+h2 { margin-top: 0; font-size: 1.1rem; }
+label { display: flex; flex-direction: column; gap: 4px; font-size: .85rem; color: var(--muted); }
+input, select { padding: 8px; border: 1px solid var(--border); border-radius: 6px;
+                background: var(--bg); color: var(--text); font: inherit; }
+button { padding: 8px 14px; border: 0; border-radius: 6px; background: var(--accent);
+         color: #fff; font: inherit; cursor: pointer; }
+.dark-btn, body button { color: #fff; }
+.tabs { display: flex; gap: 4px; margin-bottom: 12px; }
+.tab { background: transparent; color: var(--muted); border: 1px solid var(--border); }
+.tab.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+.panel { display: flex; flex-direction: column; gap: 12px; }
+.row { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; }
+.check { flex-direction: row; align-items: center; }
+#status { margin-top: 12px; }
+#status.error { color: var(--bad); }
+#status .warn { color: var(--muted); }
+#stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+         gap: 8px; margin: 16px 0; }
+.stat { border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; }
+.stat b { display: block; font-size: 1.1rem; }
+.stat span { color: var(--muted); font-size: .8rem; }
+.good { color: var(--good); } .bad { color: var(--bad); }
