@@ -2,11 +2,18 @@
 from __future__ import annotations
 
 import io
+import threading
+import time
 
 import pandas as pd
 
 MAX_TICKERS = 20
 MIN_OBS = 100
+CACHE_TTL = 15 * 60  # seconds
+CACHE_MAX = 64
+
+_cache: dict[tuple, tuple[float, tuple[pd.DataFrame, list[str]]]] = {}
+_cache_lock = threading.Lock()
 
 
 def _clean(df: pd.DataFrame) -> tuple[pd.DataFrame, list[str]]:
@@ -38,15 +45,29 @@ def parse_csv(content: bytes) -> tuple[pd.DataFrame, list[str]]:
     return _clean(df)
 
 
-def fetch_prices(tickers: list[str], start: str, end: str) -> tuple[pd.DataFrame, list[str]]:
+def _download(tickers: list[str], start: str, end: str) -> pd.DataFrame:
     import yfinance as yf
 
+    return yf.download(tickers, start=start, end=end, auto_adjust=True, progress=False)
+
+
+def fetch_prices(tickers: list[str], start: str, end: str) -> tuple[pd.DataFrame, list[str]]:
+    """Fetch adjusted closes from yfinance, cached for CACHE_TTL seconds per request."""
     tickers = list(dict.fromkeys(t.strip().upper() for t in tickers if t.strip()))
     if len(tickers) < 2:
         raise ValueError("Enter at least 2 tickers")
     if len(tickers) > MAX_TICKERS:
         raise ValueError(f"At most {MAX_TICKERS} tickers allowed")
-    raw = yf.download(tickers, start=start, end=end, auto_adjust=True, progress=False)
+
+    key = (tuple(sorted(tickers)), start, end)
+    now = time.monotonic()
+    with _cache_lock:
+        hit = _cache.get(key)
+        if hit and now - hit[0] < CACHE_TTL:
+            df, warnings = hit[1]
+            return df.copy(), list(warnings)
+
+    raw = _download(tickers, start, end)
     if raw.empty:
         raise ValueError("No data returned; check tickers and dates")
     close = raw["Close"]
@@ -56,4 +77,9 @@ def fetch_prices(tickers: list[str], start: str, end: str) -> tuple[pd.DataFrame
     df, warnings = _clean(close)
     if missing:
         warnings.insert(0, f"No data for: {', '.join(missing)}")
+
+    with _cache_lock:  # only successful results are cached
+        if len(_cache) >= CACHE_MAX:
+            _cache.pop(min(_cache, key=lambda k: _cache[k][0]))
+        _cache[key] = (now, (df.copy(), list(warnings)))
     return df, warnings
