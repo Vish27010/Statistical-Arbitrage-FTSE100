@@ -38,9 +38,19 @@ During development, a version of the model reported a **1.97 Sharpe Ratio**. For
 
 ## Future Work
 The framework is modular and ready for the implementation of **Kalman Filters** for smoother hedge ratios or **Time-Exit** logic to mitigate the impact of prolonged divergence.
+
 ## Web app
 
-A FastAPI + Plotly tool: load prices (Yahoo tickers or a wide CSV), view the correlation matrix of daily returns, run an Engle-Granger cointegration test on any pair, and plot the spread and z-score.
+**Live demo: https://statistical-arbitrage-ftse100.onrender.com/**
+
+A FastAPI + Plotly tool: load prices (Yahoo tickers or a wide CSV), view the correlation matrix of daily returns, run an Engle-Granger cointegration test on any pair, and plot the spread and z-score. The free hosting tier sleeps when idle, so the first load after a quiet spell can take a while.
+
+**Using it**
+1. Enter tickers in Yahoo format (e.g. `HSBA.L, BARC.L`) with a date range, or upload a wide CSV (first column dates, one column per ticker).
+2. Click a cell in the correlation heatmap to select that pair.
+3. Read the Engle-Granger p-value, hedge ratio, half-life and the spread and z-score charts. Optionally use a rolling hedge ratio.
+
+**Limits:** up to 20 tickers, 5000 daily rows (about 20 years) and 5MB per CSV. If your range is longer than the available data, the app tells you the maximum range it can use. Yahoo fetches are cached for 15 minutes.
 
 ```bash
 python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
