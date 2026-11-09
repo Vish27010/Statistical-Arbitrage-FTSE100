@@ -9,6 +9,7 @@ import pandas as pd
 
 MAX_TICKERS = 20
 MIN_OBS = 100
+MAX_ROWS = 5000  # ~20 years of daily data
 CACHE_TTL = 15 * 60  # seconds
 CACHE_MAX = 64
 
@@ -31,7 +32,30 @@ def _clean(df: pd.DataFrame) -> tuple[pd.DataFrame, list[str]]:
     df = df.ffill(limit=3)
     if df.shape[1] < 2 or len(df.dropna()) < MIN_OBS:
         raise ValueError(f"Fewer than {MIN_OBS} overlapping rows across tickers")
+    if len(df) > MAX_ROWS:
+        raise ValueError(
+            f"Too many rows ({len(df)}); the maximum is {MAX_ROWS} (about 20 years of daily data). "
+            f"Try a start date of {df.index[-MAX_ROWS].date()} or later."
+        )
     return df, warnings
+
+
+def _range_warning(df: pd.DataFrame, start: str, end: str) -> str | None:
+    """If the data covers less than the requested range, say what is available."""
+    common = df.dropna()
+    first, last = common.index[0], common.index[-1]
+    req_start, req_end = pd.Timestamp(start), pd.Timestamp(end)
+    slack = pd.Timedelta(days=7)  # weekends/holidays, and an exclusive or future end date
+    if first - req_start <= slack and req_end - last <= slack:
+        return None
+    first_valid = df.apply(lambda c: c.first_valid_index())
+    limiting = first_valid.idxmax()
+    parts = [f"You asked for {start} to {end}, but all tickers overlap only from "
+             f"{first.date()} to {last.date()}"]
+    if first - req_start > slack:
+        parts.append(f" ({limiting} starts on {first_valid[limiting].date()})")
+    parts.append(f". Maximum range available: {first.date()} to {last.date()}.")
+    return "".join(parts)
 
 
 def parse_csv(content: bytes) -> tuple[pd.DataFrame, list[str]]:
@@ -77,6 +101,9 @@ def fetch_prices(tickers: list[str], start: str, end: str) -> tuple[pd.DataFrame
     df, warnings = _clean(close)
     if missing:
         warnings.insert(0, f"No data for: {', '.join(missing)}")
+    range_msg = _range_warning(df, start, end)
+    if range_msg:
+        warnings.append(range_msg)
 
     with _cache_lock:  # only successful results are cached
         if len(_cache) >= CACHE_MAX:

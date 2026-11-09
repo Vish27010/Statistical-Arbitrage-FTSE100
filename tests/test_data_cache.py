@@ -46,3 +46,38 @@ def test_expiry_and_errors_not_cached(monkeypatch):
     monkeypatch.setattr(data, "CACHE_TTL", 0)
     data.fetch_prices(["AAA", "BBB"], "2022-01-01", "2022-12-31")
     assert len(calls) == 4
+
+
+def fake_raw_range(starts, end="2022-12-31"):
+    """Tickers that start on different dates (NaN before their start)."""
+    idx = pd.bdate_range(min(starts.values()), end)
+    rng = np.random.default_rng(1)
+    cols = {}
+    for t, st in starts.items():
+        v = 100 + rng.normal(size=len(idx)).cumsum()
+        v[idx < pd.Timestamp(st)] = np.nan
+        cols[t] = v
+    return pd.concat({"Close": pd.DataFrame(cols, index=idx)}, axis=1)
+
+
+def test_short_history_suggests_available_range(monkeypatch):
+    raw = fake_raw_range({"AAA": "2006-01-02", "BBB": "2008-03-03"})
+    monkeypatch.setattr(data, "_download", lambda t, s, e: raw)
+    df, warnings = data.fetch_prices(["AAA", "BBB"], "2006-01-01", "2022-12-31")
+    msg = " ".join(warnings)
+    assert "BBB starts on 2008-03-03" in msg
+    assert "Maximum range available: 2008-03-03 to 2022-12-30" in msg
+
+
+def test_full_range_has_no_warning(monkeypatch):
+    raw = fake_raw_range({"AAA": "2020-01-01", "BBB": "2020-01-01"})
+    monkeypatch.setattr(data, "_download", lambda t, s, e: raw)
+    _, warnings = data.fetch_prices(["AAA", "BBB"], "2020-01-01", "2022-12-31")
+    assert warnings == []
+
+
+def test_row_cap_enforced_at_load_with_suggestion(monkeypatch):
+    monkeypatch.setattr(data, "MAX_ROWS", 300)
+    monkeypatch.setattr(data, "_download", lambda t, s, e: fake_raw_range({"AAA": "2020-01-01", "BBB": "2020-01-01"}))
+    with pytest.raises(ValueError, match=r"Too many rows.*Try a start date of"):
+        data.fetch_prices(["AAA", "BBB"], "2020-01-01", "2022-12-31")

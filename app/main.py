@@ -14,7 +14,7 @@ from slowapi.errors import RateLimitExceeded  # noqa: E402
 from slowapi.util import get_remote_address  # noqa: E402
 
 from statarb.analysis import correlation_matrix, engle_granger, top_pairs  # noqa: E402
-from statarb.data import fetch_prices, parse_csv  # noqa: E402
+from statarb.data import MAX_ROWS, fetch_prices, parse_csv  # noqa: E402
 
 MAX_UPLOAD_BYTES = 5 * 1024 * 1024
 STATIC = Path(__file__).parent / "static"
@@ -32,8 +32,8 @@ class Prices(BaseModel):
 
     def to_df(self) -> pd.DataFrame:
         df = pd.DataFrame(self.columns, index=pd.to_datetime(self.dates))
-        if len(df) > 2600:
-            raise HTTPException(413, "Too many rows (max ~10 years daily)")
+        if len(df) > MAX_ROWS:
+            raise HTTPException(413, f"Too many rows (max {MAX_ROWS}, about 20 years daily)")
         return df
 
 
