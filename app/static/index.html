@@ -16,6 +16,7 @@
   <main>
     <section class="card">
       <h2>1. Load prices</h2>
+      <div class="progress" id="prog-load" role="progressbar" aria-label="Loading prices" hidden><div class="bar"></div></div>
       <div class="tabs">
         <button class="tab active" data-tab="tickers">Tickers</button>
         <button class="tab" data-tab="csv">CSV upload</button>
@@ -39,12 +40,14 @@
 
     <section class="card" id="corr-card" hidden>
       <h2>2. Correlation of daily returns</h2>
+      <div class="progress" id="prog-corr" role="progressbar" aria-label="Computing correlations" hidden><div class="bar"></div></div>
       <p class="hint">Click a cell to test that pair.</p>
       <div id="heatmap"></div>
     </section>
 
     <section class="card" id="result-card" hidden>
       <h2>3. Cointegration</h2>
+      <div class="progress" id="prog-coint" role="progressbar" aria-label="Running cointegration test" hidden><div class="bar"></div></div>
       <div class="row">
         <label>Y <select id="sel-y"></select></label>
         <label>X <select id="sel-x"></select></label>

@@ -40,6 +40,23 @@ async function api(path, options) {
   return body;
 }
 
+// Show an indeterminate progress bar on a card while an async step runs.
+async function tracked(barId, fn) {
+  const bar = $(barId);
+  const card = bar.closest(".card");
+  const buttons = card.querySelectorAll("button");
+  bar.hidden = false;
+  card.setAttribute("aria-busy", "true");
+  buttons.forEach((b) => (b.disabled = true));
+  try {
+    return await fn();
+  } finally {
+    bar.hidden = true;
+    card.removeAttribute("aria-busy");
+    buttons.forEach((b) => (b.disabled = false));
+  }
+}
+
 const postJson = (path, data) =>
   api(path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) });
 
@@ -47,13 +64,19 @@ async function loaded(data) {
   prices = { dates: data.dates, columns: data.columns };
   const names = Object.keys(prices.columns);
   setStatus(`Loaded ${names.length} tickers, ${prices.dates.length} rows.`, false, data.warnings);
-  const corr = await postJson("/api/correlation", prices);
+  $("corr-card").hidden = false;
+  let corr;
+  try {
+    corr = await tracked("prog-corr", () => postJson("/api/correlation", prices));
+  } catch (e) {
+    $("corr-card").hidden = true;
+    throw e;
+  }
   drawHeatmap(corr);
   for (const id of ["sel-y", "sel-x"]) {
     $(id).innerHTML = names.map((n) => `<option>${n}</option>`).join("");
   }
   $("sel-x").selectedIndex = 1;
-  $("corr-card").hidden = false;
   $("result-card").hidden = false;
 }
 
@@ -78,10 +101,10 @@ function stat(label, value, cls = "") {
 
 async function runTest() {
   try {
-    const r = await postJson("/api/cointegration", {
+    const r = await tracked("prog-coint", () => postJson("/api/cointegration", {
       prices, ticker_y: $("sel-y").value, ticker_x: $("sel-x").value,
       window: +$("window").value, rolling: $("rolling").checked,
-    });
+    }));
     const ok = r.cointegrated_5pct;
     $("stats").innerHTML = [
       stat("Engle-Granger p-value", r.p_value.toFixed(4), ok ? "good" : "bad"),
@@ -124,9 +147,10 @@ $("tickers-form").addEventListener("submit", async (e) => {
   e.preventDefault();
   setStatus("Fetching prices…");
   try {
-    await loaded(await postJson("/api/prices/tickers", {
+    const data = await tracked("prog-load", () => postJson("/api/prices/tickers", {
       tickers: $("tickers").value.split(","), start: $("start").value, end: $("end").value,
     }));
+    await loaded(data);
   } catch (err) { setStatus(err.message, true); }
 });
 
@@ -136,7 +160,8 @@ $("csv-form").addEventListener("submit", async (e) => {
   const fd = new FormData();
   fd.append("file", $("csv").files[0]);
   try {
-    await loaded(await api("/api/prices/csv", { method: "POST", body: fd }));
+    const data = await tracked("prog-load", () => api("/api/prices/csv", { method: "POST", body: fd }));
+    await loaded(data);
   } catch (err) { setStatus(err.message, true); }
 });
 
